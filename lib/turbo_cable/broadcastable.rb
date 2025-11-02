@@ -4,42 +4,61 @@ require 'json'
 module TurboCable
   # Provides Turbo Streams broadcasting methods for ActiveRecord models
   # Drop-in replacement for Turbo::Streams::Broadcastable
+  #
+  # Hybrid async/sync approach:
+  # - _later_to methods: Use Active Job if available, otherwise synchronous
+  # - Non-_later_to methods: Always synchronous
   module Broadcastable
     extend ActiveSupport::Concern
 
-    # Async broadcast methods (using _later_ suffix for API compatibility)
+    # Async broadcast methods (truly async if Active Job is configured)
     def broadcast_replace_later_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :replace, **options)
+      if async_broadcast_available?
+        enqueue_broadcast_job(stream_name, action: :replace, **options)
+      else
+        broadcast_action_now(stream_name, action: :replace, **options)
+      end
     end
 
     def broadcast_update_later_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :update, **options)
+      if async_broadcast_available?
+        enqueue_broadcast_job(stream_name, action: :update, **options)
+      else
+        broadcast_action_now(stream_name, action: :update, **options)
+      end
     end
 
     def broadcast_append_later_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :append, **options)
+      if async_broadcast_available?
+        enqueue_broadcast_job(stream_name, action: :append, **options)
+      else
+        broadcast_action_now(stream_name, action: :append, **options)
+      end
     end
 
     def broadcast_prepend_later_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :prepend, **options)
+      if async_broadcast_available?
+        enqueue_broadcast_job(stream_name, action: :prepend, **options)
+      else
+        broadcast_action_now(stream_name, action: :prepend, **options)
+      end
     end
 
-    # Synchronous broadcast methods (no _later_)
-    # Since our HTTP POST is already effectively immediate, these are aliases
+    # Synchronous broadcast methods (always immediate)
     def broadcast_replace_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :replace, **options)
+      broadcast_action_now(stream_name, action: :replace, **options)
     end
 
     def broadcast_update_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :update, **options)
+      broadcast_action_now(stream_name, action: :update, **options)
     end
 
     def broadcast_append_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :append, **options)
+      broadcast_action_now(stream_name, action: :append, **options)
     end
 
     def broadcast_prepend_to(stream_name, **options)
-      broadcast_action_later_to(stream_name, action: :prepend, **options)
+      broadcast_action_now(stream_name, action: :prepend, **options)
     end
 
     def broadcast_remove_to(stream_name, target:)
@@ -53,7 +72,28 @@ module TurboCable
 
     private
 
-    def broadcast_action_later_to(stream_name, action:, target: nil, partial: nil, html: nil, locals: {})
+    # Check if async broadcasting is available (Active Job with non-inline adapter)
+    def async_broadcast_available?
+      defined?(ActiveJob) &&
+        defined?(TurboCable::BroadcastJob) &&
+        ActiveJob::Base.queue_adapter_name != :inline
+    end
+
+    # Enqueue broadcast job for async processing
+    def enqueue_broadcast_job(stream_name, action:, target: nil, partial: nil, html: nil, locals: {})
+      TurboCable::BroadcastJob.perform_later(
+        stream_name,
+        action: action,
+        model_gid: to_global_id.to_s,
+        target: target,
+        partial: partial,
+        html: html,
+        locals: locals
+      )
+    end
+
+    # Broadcast immediately (synchronous)
+    def broadcast_action_now(stream_name, action:, target: nil, partial: nil, html: nil, locals: {})
       # Determine target - use explicit target or derive from model
       target ||= "#{self.class.name.underscore}_#{id}"
 

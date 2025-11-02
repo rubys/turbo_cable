@@ -39,6 +39,7 @@ For applications within the constraints above:
 
 - **Turbo Streams API compatibility** - Same `turbo_stream_from` and `broadcast_*` methods
 - **Zero dependencies** - Only Ruby stdlib (no Redis, no Solid Cable, no external services)
+- **Hybrid async/sync** - Uses Active Job when available, otherwise synchronous (transparent)
 - **Simple installation** - `rails generate turbo_cable:install`
 - **All Turbo Stream actions** - replace, update, append, prepend, remove
 - **Auto-reconnection** - Handles connection drops gracefully
@@ -230,6 +231,31 @@ Content-Type: application/json
 4. **Action Cable's `stream_for`** - Use `turbo_stream_from` instead.
 
 5. **Separate cable servers** - WebSocket handling is in-process with Rails, not a standalone server.
+
+### Hybrid Async/Sync Behavior
+
+TurboCable intelligently chooses between async and sync broadcasting:
+
+**Methods with `_later_to` suffix** (e.g., `broadcast_replace_later_to`):
+- ✅ **Async** - If Active Job is configured with a non-inline adapter (Solid Queue, Sidekiq, etc.), broadcasts are enqueued as jobs
+- 🔄 **Sync fallback** - If no job backend exists, broadcasts happen synchronously via HTTP POST
+
+**Methods without `_later_to`** (e.g., `broadcast_replace_to`):
+- 🔄 **Always sync** - Broadcasts happen immediately, useful for callbacks like `before_destroy`
+
+**Why hybrid?**
+- **Zero dependencies** - Works out of the box without requiring a job backend
+- **Performance** - Async when available prevents blocking HTTP responses
+- **Flexibility** - Automatically adapts to your infrastructure
+
+**Example:**
+```ruby
+# Development (no job backend) - synchronous
+counter.broadcast_replace_later_to "updates"  # HTTP POST happens now
+
+# Production (with Solid Queue) - asynchronous
+counter.broadcast_replace_later_to "updates"  # Job enqueued, returns immediately
+```
 
 ### What IS Supported
 
