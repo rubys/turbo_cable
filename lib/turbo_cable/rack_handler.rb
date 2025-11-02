@@ -113,6 +113,11 @@ module TurboCable
     end
 
     def handle_broadcast(env)
+      # Security: Only allow broadcasts from localhost
+      unless localhost_request?(env)
+        return [403, { 'Content-Type' => 'text/plain' }, ['Forbidden: Broadcasts only allowed from localhost']]
+      end
+
       # Read JSON body
       input = env['rack.input'].read
       data = JSON.parse(input)
@@ -133,6 +138,12 @@ module TurboCable
       end
 
       [200, { 'Content-Type' => 'text/plain' }, ['OK']]
+    end
+
+    def localhost_request?(env)
+      remote_addr = env['REMOTE_ADDR']
+      # Allow IPv4 localhost (127.0.0.1, 127.x.x.x) and IPv6 localhost (::1)
+      remote_addr =~ /^127\./ || remote_addr == '::1'
     end
 
     # Read WebSocket frame (RFC 6455 format)

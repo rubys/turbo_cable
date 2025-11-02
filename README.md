@@ -188,6 +188,18 @@ Content-Type: application/json
 
 **Critical architectural constraint:** All components (WebSocket server, Rails app, broadcast endpoint) run in the same process. This is why cross-server broadcasting isn't supported.
 
+## Security
+
+### Broadcast Endpoint Protection
+
+The `/_broadcast` endpoint is **restricted to localhost only** (127.0.0.0/8 and ::1). This prevents external attackers from broadcasting arbitrary HTML to connected clients.
+
+**Why this matters:** An unprotected broadcast endpoint would allow XSS attacks - anyone who could POST to `/_broadcast` could inject malicious HTML into user browsers.
+
+**Why localhost-only is safe:** Since TurboCable runs in-process with your Rails app, all broadcasts originate from the same machine. External access is never needed and would indicate an attack.
+
+**Network configuration:** Ensure your firewall/reverse proxy doesn't forward external requests to `/_broadcast`. This endpoint should never be exposed through nginx, Apache, or any proxy.
+
 ## Compatibility
 
 - **Rails:** 7.0+ (tested with 8.0+)
