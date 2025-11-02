@@ -75,6 +75,8 @@ Restart your Rails server and you're done!
 
 ## Usage
 
+> **💡 Want real-world examples?** See [EXAMPLES.md](EXAMPLES.md) for patterns drawn from production applications: live scoring, progress tracking, background job output, and more.
+
 ### In Your Views
 
 Use `turbo_stream_from` exactly as you would with Action Cable:
