@@ -1,5 +1,5 @@
-require 'net/http'
-require 'json'
+require "net/http"
+require "json"
 
 module TurboCable
   # Provides Turbo Streams broadcasting methods for ActiveRecord models
@@ -121,9 +121,9 @@ module TurboCable
     end
 
     def broadcast_turbo_stream(stream_name, html)
-      uri = URI(ENV.fetch('TURBO_CABLE_BROADCAST_URL', "http://localhost:#{ENV.fetch('PORT', 3000)}/_broadcast"))
+      uri = URI(ENV.fetch("TURBO_CABLE_BROADCAST_URL", "http://localhost:#{ENV.fetch('PORT', 3000)}/_broadcast"))
       http = Net::HTTP.new(uri.host, uri.port)
-      request = Net::HTTP::Post.new(uri.path, 'Content-Type' => 'application/json')
+      request = Net::HTTP::Post.new(uri.path, "Content-Type" => "application/json")
       request.body = {
         stream: stream_name,
         data: html

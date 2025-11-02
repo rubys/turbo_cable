@@ -17,7 +17,7 @@ module TurboCable
           unless content.include?('data-controller="turbo-streams"')
             inject_into_file layout_file,
               ' data-controller="turbo-streams"',
-              after: '<body'
+              after: "<body"
           end
         else
           say "WARNING: Could not find #{layout_file}", :yellow
