@@ -20,9 +20,10 @@ Custom WebSocket-based Turbo Streams implementation for Rails. Provides signific
 - **Load-balanced production** - Multiple Rails instances behind a load balancer
 - **Cross-server broadcasts** - Need to broadcast to users on different machines
 - **High-availability setups** - Require Redis or Solid Cable backed pub/sub across instances
-- **Shared WebSocket servers** - Multi-tenant architectures with shared cable servers
+- **Bidirectional WebSocket communication** - Client→Server data flow over WebSockets (chat apps, collaborative editing, real-time drawing)
+- **Action Cable channels** - Custom channels with server-side actions and the channels DSL
 
-**If you need cross-server broadcasts, stick with Action Cable + Redis/Solid Cable.** TurboCable only broadcasts within a single Rails process.
+**If you need cross-server broadcasts or bidirectional WebSocket communication, stick with Action Cable + Redis/Solid Cable.** TurboCable only broadcasts within a single Rails process and only supports server→client Turbo Streams.
 
 ## Why TurboCable?
 
@@ -148,30 +149,6 @@ ENV['TURBO_CABLE_BROADCAST_URL'] = 'http://localhost:3000/_broadcast'
 
 **Infrastructure:** Just add the gem and run the installer. Action Cable, Redis, and Solid Cable can be removed.
 
-## Real-World Use Cases
-
-### ✅ Good Fit
-
-**Single VPS deployment** - One Rails server handling all traffic. Live updates for dashboards, notifications, or collaborative features within that single server.
-
-**Development environment** - Faster startup, less memory, simpler debugging than Action Cable.
-
-**Multi-tenant with process isolation** - Each tenant runs in a separate Rails process (like separate databases per customer). Each process has isolated WebSocket connections with no cross-tenant concerns.
-
-**Resource-constrained deployments** - Raspberry Pi, embedded systems, or budget VPS where 134MB per instance matters.
-
-**Prototypes and MVPs** - Get real-time features working quickly without Redis/Solid Cable infrastructure.
-
-### ❌ Poor Fit
-
-**Heroku with multiple dynos** - User A on dyno 1 won't see broadcasts from user B on dyno 2. Stick with Action Cable + Redis/Solid Cable.
-
-**AWS ECS/Fargate with replicas** - Same issue - each container is isolated.
-
-**Kubernetes with multiple pods** - Broadcasts don't cross pod boundaries.
-
-**Any load-balanced setup** - If you have >1 Rails instance serving the same application, you need Action Cable + Redis/Solid Cable for cross-instance broadcasting.
-
 ## Protocol Specification
 
 ### WebSocket Messages (JSON)
@@ -218,25 +195,13 @@ Content-Type: application/json
 - **Browsers:** All modern browsers with WebSocket support
 - **Server:** Puma or any Rack server that supports `rack.hijack`
 
-## Technical Limitations
+## Technical Details
 
-### What's NOT Supported
+### Action Cable Feature Differences
 
-1. **Cross-process broadcasts** - Broadcasts only reach WebSocket connections in the same Rails process. No Redis/Solid Cable adapter, no multi-server pub/sub.
-
-2. **Horizontal scaling** - Can't scale to multiple instances of your app on different machines. Each instance would have isolated WebSocket connections.
-
-3. **Action Cable channels** - Only Turbo Streams. No support for custom Action Cable channels or the channels DSL.
-
-4. **Action Cable's `stream_for`** - Use `turbo_stream_from` instead.
-
-5. **Separate cable servers** - WebSocket handling is in-process with Rails, not a standalone server.
-
-6. **Full duplex / bidirectional communication** - TurboCable is **unidirectional** for data flow:
-   - **Server → Client**: Turbo Stream broadcasts (live DOM updates)
-   - **Client → Server**: Use standard HTTP requests (forms, fetch, Turbo)
-
-   This differs from Action Cable which supports bidirectional communication with channel actions. If you need clients to invoke server methods over WebSocket (chat applications, collaborative editing, real-time drawing), stick with Action Cable or AnyCable.
+- **`stream_for` not supported** - Use `turbo_stream_from` instead
+- **Client→Server communication** - Use standard HTTP requests (forms, fetch, Turbo Frames) instead of WebSocket channel actions
+- **In-process WebSocket server** - Not a separate cable server; runs within Rails process
 
 ### Hybrid Async/Sync Behavior
 
