@@ -3,7 +3,7 @@ require "turbo_cable/rack_handler"
 
 class RackHandlerTest < ActiveSupport::TestCase
   def setup
-    @app = ->(env) { [200, {}, ["OK"]] }
+    @app = ->(env) { [ 200, {}, [ "OK" ] ] }
     @handler = TurboCable::RackHandler.new(@app)
   end
 
