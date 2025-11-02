@@ -232,6 +232,12 @@ Content-Type: application/json
 
 5. **Separate cable servers** - WebSocket handling is in-process with Rails, not a standalone server.
 
+6. **Full duplex / bidirectional communication** - TurboCable is **unidirectional** for data flow:
+   - **Server → Client**: Turbo Stream broadcasts (live DOM updates)
+   - **Client → Server**: Use standard HTTP requests (forms, fetch, Turbo)
+
+   This differs from Action Cable which supports bidirectional communication with channel actions. If you need clients to invoke server methods over WebSocket (chat applications, collaborative editing, real-time drawing), stick with Action Cable or AnyCable.
+
 ### Hybrid Async/Sync Behavior
 
 TurboCable intelligently chooses between async and sync broadcasting:
