@@ -48,8 +48,14 @@ module TurboCable
       require "net/http"
       require "json"
 
-      uri = URI(ENV.fetch("TURBO_CABLE_BROADCAST_URL", "http://localhost:#{ENV.fetch('PORT', 3000)}/_broadcast"))
+      # Get the actual Puma/Rails server port from the TURBO_CABLE_PORT env var
+      # Don't use ENV['PORT'] as it may be the Thruster/proxy port
+      default_port = ENV.fetch('TURBO_CABLE_PORT', '3000')
+      uri = URI(ENV.fetch("TURBO_CABLE_BROADCAST_URL", "http://localhost:#{default_port}/_broadcast"))
       http = Net::HTTP.new(uri.host, uri.port)
+      http.open_timeout = 1
+      http.read_timeout = 1
+
       request = Net::HTTP::Post.new(uri.path, "Content-Type" => "application/json")
       request.body = {
         stream: stream_name,
