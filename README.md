@@ -169,12 +169,20 @@ The Stimulus controller automatically dispatches `turbo:stream-message` CustomEv
 
 ### Broadcast URL (Optional)
 
-By default, broadcasts go to `http://localhost:3000/_broadcast`. For production with reverse proxies:
+By default, broadcasts connect to the Rails server on port 3000. Configure these environment variables if needed:
 
 ```ruby
 # config/application.rb or initializer
+
+# Set the port for broadcast connections (default: 3000)
+# Use TURBO_CABLE_PORT instead of PORT to avoid conflicts with proxy/Thruster ports
+ENV['TURBO_CABLE_PORT'] = '3000'
+
+# Or specify the complete URL (overrides TURBO_CABLE_PORT)
 ENV['TURBO_CABLE_BROADCAST_URL'] = 'http://localhost:3000/_broadcast'
 ```
+
+**Important:** Don't use `ENV['PORT']` for TurboCable configuration, as it may be set to a reverse proxy port (Thruster, nginx, etc.) rather than the Rails server port. Use `TURBO_CABLE_PORT` to explicitly specify the Rails server's port.
 
 ## Migration from Action Cable
 
