@@ -128,6 +128,43 @@ class Score < ApplicationRecord
 end
 ```
 
+### Custom JSON Broadcasting
+
+For use cases that need structured data instead of HTML (progress bars, charts, interactive widgets), use `TurboCable::Broadcastable.broadcast_json`:
+
+```ruby
+class OfflinePlaylistJob < ApplicationJob
+  def perform(user_id)
+    stream_name = "playlist_progress_#{user_id}"
+
+    # Broadcast JSON updates
+    TurboCable::Broadcastable.broadcast_json(stream_name, {
+      status: 'processing',
+      progress: 50,
+      message: 'Processing files...'
+    })
+  end
+end
+```
+
+**JavaScript handling** (in a Stimulus controller):
+
+```javascript
+connect() {
+  document.addEventListener('turbo:stream-message', this.handleMessage.bind(this))
+}
+
+handleMessage(event) {
+  const { stream, data } = event.detail
+  if (stream === 'playlist_progress_123') {
+    console.log(data.progress)  // 50
+    this.updateProgressBar(data.progress, data.message)
+  }
+}
+```
+
+The Stimulus controller automatically dispatches `turbo:stream-message` CustomEvents when receiving JSON data (non-HTML strings). See [EXAMPLES.md](EXAMPLES.md#custom-json-broadcasting) for a complete working example with progress tracking.
+
 ## Configuration
 
 ### Broadcast URL (Optional)
@@ -166,8 +203,13 @@ ENV['TURBO_CABLE_BROADCAST_URL'] = 'http://localhost:3000/_broadcast'
 ```json
 {"type": "subscribed", "stream": "counter_updates"}
 {"type": "message", "stream": "counter_updates", "data": "<turbo-stream...>"}
+{"type": "message", "stream": "progress", "data": {"status": "processing", "progress": 50}}
 {"type": "ping"}
 ```
+
+The `data` field can contain either:
+- **String**: Turbo Stream HTML (automatically processed as DOM updates)
+- **Object**: Custom JSON data (dispatched as `turbo:stream-message` event)
 
 ### Broadcast Endpoint
 
@@ -175,9 +217,16 @@ ENV['TURBO_CABLE_BROADCAST_URL'] = 'http://localhost:3000/_broadcast'
 POST /_broadcast
 Content-Type: application/json
 
+# Turbo Stream HTML
 {
   "stream": "counter_updates",
   "data": "<turbo-stream action=\"replace\" target=\"counter\">...</turbo-stream>"
+}
+
+# Custom JSON
+{
+  "stream": "progress_updates",
+  "data": {"status": "processing", "progress": 50, "message": "Processing..."}
 }
 ```
 

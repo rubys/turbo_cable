@@ -11,6 +11,25 @@ module TurboCable
   module Broadcastable
     extend ActiveSupport::Concern
 
+    # Module-level method for broadcasting custom JSON data
+    # Useful for progress updates, job status, or non-Turbo-Stream messages
+    def self.broadcast_json(stream_name, data)
+      uri = URI(ENV.fetch("TURBO_CABLE_BROADCAST_URL", "http://localhost:#{ENV.fetch('PORT', 3000)}/_broadcast"))
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.open_timeout = 1
+      http.read_timeout = 1
+
+      request = Net::HTTP::Post.new(uri.path, "Content-Type" => "application/json")
+      request.body = {
+        stream: stream_name,
+        data: data
+      }.to_json
+
+      http.request(request)
+    rescue => e
+      Rails.logger.error("JSON broadcast failed: #{e.message}") if defined?(Rails)
+    end
+
     # Async broadcast methods (truly async if Active Job is configured)
     def broadcast_replace_later_to(stream_name, **options)
       if async_broadcast_available?

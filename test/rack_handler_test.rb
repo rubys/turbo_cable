@@ -55,14 +55,35 @@ class RackHandlerTest < ActiveSupport::TestCase
     assert_includes body.join, "Forbidden"
   end
 
+  test "accepts JSON broadcast data" do
+    json_data = { status: "processing", progress: 50, message: "Test" }
+    env = build_broadcast_env("127.0.0.1", json_data)
+    status, headers, body = @handler.call(env)
+
+    assert_equal 200, status
+    assert_equal "OK", body.join
+  end
+
+  test "accepts both HTML string and JSON object broadcasts" do
+    # Test HTML string
+    html_env = build_broadcast_env("127.0.0.1", "<turbo-stream></turbo-stream>")
+    status, _, _ = @handler.call(html_env)
+    assert_equal 200, status
+
+    # Test JSON object
+    json_env = build_broadcast_env("127.0.0.1", { data: "test" })
+    status, _, _ = @handler.call(json_env)
+    assert_equal 200, status
+  end
+
   private
 
-  def build_broadcast_env(remote_addr)
+  def build_broadcast_env(remote_addr, data = "<turbo-stream></turbo-stream>")
     {
       "PATH_INFO" => "/_broadcast",
       "REQUEST_METHOD" => "POST",
       "REMOTE_ADDR" => remote_addr,
-      "rack.input" => StringIO.new('{"stream":"test","data":"<turbo-stream></turbo-stream>"}')
+      "rack.input" => StringIO.new(JSON.generate({ stream: "test", data: data }))
     }
   end
 end

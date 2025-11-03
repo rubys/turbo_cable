@@ -170,6 +170,174 @@ end
 
 ---
 
+## Custom JSON Broadcasting
+
+**Use Case**: Send structured JSON data instead of HTML when you need custom client-side handling, such as updating a progress bar, chart, or any interactive component.
+
+### Progress Bar with JSON Events
+
+**View** (`app/views/playlists/show.html.erb`):
+```erb
+<div data-controller="offline-playlist"
+     data-offline-playlist-stream-value="offline_playlist_<%= ENV['RAILS_APP_DB'] %>_<%= current_user.id %>">
+  <%= turbo_stream_from "offline_playlist_#{ENV['RAILS_APP_DB']}_#{current_user.id}" %>
+
+  <button data-action="click->offline-playlist#generate">
+    Prepare Offline Version
+  </button>
+
+  <div data-offline-playlist-target="progress" class="hidden">
+    <div class="progress-bar">
+      <div data-offline-playlist-target="progressBar" style="width: 0%">0%</div>
+    </div>
+    <p data-offline-playlist-target="message">Starting...</p>
+  </div>
+</div>
+```
+
+**Stimulus Controller** (`app/javascript/controllers/offline_playlist_controller.js`):
+```javascript
+import { Controller } from "@hotwired/stimulus"
+
+export default class extends Controller {
+  static targets = ["button", "progress", "message", "progressBar"]
+  static values = { stream: String }
+
+  connect() {
+    // Listen for custom JSON events from TurboCable
+    this.boundHandleMessage = this.handleMessage.bind(this)
+    document.addEventListener('turbo:stream-message', this.boundHandleMessage)
+  }
+
+  disconnect() {
+    document.removeEventListener('turbo:stream-message', this.boundHandleMessage)
+  }
+
+  handleMessage(event) {
+    const { stream, data } = event.detail
+
+    // Only handle events for our stream
+    if (stream !== this.streamValue) return
+
+    // Handle different message types
+    switch (data.status) {
+      case 'processing':
+        this.updateProgress(data.progress, data.message)
+        break
+      case 'completed':
+        this.showDownloadLink(data.download_key)
+        break
+      case 'error':
+        this.showError(data.message)
+        break
+    }
+  }
+
+  generate() {
+    this.buttonTarget.disabled = true
+    this.progressTarget.classList.remove("hidden")
+
+    // Trigger job via HTTP
+    fetch(window.location.pathname, {
+      method: "POST",
+      headers: {
+        "X-CSRF-Token": document.querySelector('[name="csrf-token"]').content
+      }
+    })
+  }
+
+  updateProgress(percent, message) {
+    this.progressBarTarget.style.width = `${percent}%`
+    this.progressBarTarget.textContent = `${percent}%`
+    this.messageTarget.textContent = message
+  }
+
+  showDownloadLink(cacheKey) {
+    const downloadUrl = `${window.location.pathname}.zip?cache_key=${cacheKey}`
+    this.messageTarget.innerHTML = `
+      <a href="${downloadUrl}" class="download-button">Download Playlist</a>
+    `
+  }
+
+  showError(message) {
+    this.messageTarget.textContent = message
+    this.messageTarget.classList.add("error")
+  }
+}
+```
+
+**Job** (`app/jobs/offline_playlist_job.rb`):
+```ruby
+class OfflinePlaylistJob < ApplicationJob
+  def perform(event_id, user_id)
+    database = ENV['RAILS_APP_DB']
+    stream_name = "offline_playlist_#{database}_#{user_id}"
+
+    # Broadcast initial status
+    TurboCable::Broadcastable.broadcast_json(stream_name, {
+      status: 'processing',
+      progress: 0,
+      message: 'Starting playlist generation...'
+    })
+
+    total_heats = Solo.joins(:heat).where(heats: { number: 1.. }).count
+
+    if total_heats == 0
+      TurboCable::Broadcastable.broadcast_json(stream_name, {
+        status: 'error',
+        message: 'No solos found'
+      })
+      return
+    end
+
+    # Process items and broadcast progress
+    processed = 0
+    Solo.joins(:heat).where(heats: { number: 1.. }).find_each do |solo|
+      # ... do processing ...
+
+      processed += 1
+      progress = (processed.to_f / total_heats * 100).to_i
+
+      # Broadcast progress update
+      TurboCable::Broadcastable.broadcast_json(stream_name, {
+        status: 'processing',
+        progress: progress,
+        message: "Processing heat #{processed} of #{total_heats}..."
+      })
+    end
+
+    # Generate final file
+    cache_key = generate_zip_file(event_id, user_id)
+
+    # Broadcast completion
+    TurboCable::Broadcastable.broadcast_json(stream_name, {
+      status: 'completed',
+      progress: 100,
+      message: 'Playlist ready for download',
+      download_key: cache_key
+    })
+  rescue => e
+    Rails.logger.error("Playlist generation failed: #{e.message}")
+    TurboCable::Broadcastable.broadcast_json(stream_name, {
+      status: 'error',
+      message: "Failed to generate playlist: #{e.message}"
+    })
+  end
+end
+```
+
+**Pattern**:
+- Use `TurboCable::Broadcastable.broadcast_json()` to send structured data
+- JavaScript receives `turbo:stream-message` CustomEvent with `{ stream, data }`
+- Stimulus controller filters events by stream name
+- Full control over client-side behavior (animations, state management, etc.)
+
+**When to use JSON vs HTML**:
+- ✅ **JSON**: Progress bars, charts, interactive widgets, state machines
+- ✅ **HTML**: Simple DOM updates, lists, forms, standard content
+
+---
+
 ## Background Command Output
 
 **Use Case**: Admin runs a long-running command. Output streams to browser as it's generated.
