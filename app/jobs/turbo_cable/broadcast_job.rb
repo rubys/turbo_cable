@@ -48,9 +48,10 @@ module TurboCable
       require "net/http"
       require "json"
 
-      # Get the actual Puma/Rails server port from the TURBO_CABLE_PORT env var
-      # Don't use ENV['PORT'] as it may be the Thruster/proxy port
-      default_port = ENV.fetch('TURBO_CABLE_PORT', '3000')
+      # Get the actual Puma/Rails server port
+      # Priority: TURBO_CABLE_PORT > PORT > 3000
+      # Use TURBO_CABLE_PORT to override PORT when it's set to proxy/Thruster port
+      default_port = ENV['TURBO_CABLE_PORT'] || ENV['PORT'] || '3000'
       uri = URI(ENV.fetch("TURBO_CABLE_BROADCAST_URL", "http://localhost:#{default_port}/_broadcast"))
       http = Net::HTTP.new(uri.host, uri.port)
       http.open_timeout = 1

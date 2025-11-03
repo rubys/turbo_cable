@@ -169,20 +169,27 @@ The Stimulus controller automatically dispatches `turbo:stream-message` CustomEv
 
 ### Broadcast URL (Optional)
 
-By default, broadcasts connect to the Rails server on port 3000. Configure these environment variables if needed:
+By default, broadcasts use this port selection logic:
+1. `ENV['TURBO_CABLE_PORT']` - if set, always use this port
+2. `ENV['PORT']` - if set and TURBO_CABLE_PORT is not set, use this port
+3. `3000` - default fallback
+
+Configure these environment variables if needed:
 
 ```ruby
 # config/application.rb or initializer
 
-# Set the port for broadcast connections (default: 3000)
-# Use TURBO_CABLE_PORT instead of PORT to avoid conflicts with proxy/Thruster ports
+# Override PORT when it's set to a proxy/foreman port (e.g., Thruster, foreman defaults to 5000)
 ENV['TURBO_CABLE_PORT'] = '3000'
 
-# Or specify the complete URL (overrides TURBO_CABLE_PORT)
+# Or specify the complete URL (overrides all port detection)
 ENV['TURBO_CABLE_BROADCAST_URL'] = 'http://localhost:3000/_broadcast'
 ```
 
-**Important:** Don't use `ENV['PORT']` for TurboCable configuration, as it may be set to a reverse proxy port (Thruster, nginx, etc.) rather than the Rails server port. Use `TURBO_CABLE_PORT` to explicitly specify the Rails server's port.
+**When to set `TURBO_CABLE_PORT`:**
+- **Foreman/Overmind**: These set `PORT=5000` by default, but Rails runs on a different port
+- **Thruster/nginx proxy**: When `PORT` is set to the proxy port, not the Rails server port
+- **Never needed**: When `PORT` correctly points to your Rails server (like with Navigator/configurator.rb)
 
 ## Migration from Action Cable
 
