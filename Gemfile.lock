@@ -1,8 +1,8 @@
 PATH
   remote: .
   specs:
-    turbo_cable (0.1.0)
-      rails (>= 8.1.1)
+    turbo_cable (1.0.0)
+      rails (>= 7.0)
 
 GEM
   remote: https://rubygems.org/
