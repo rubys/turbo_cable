@@ -48,6 +48,10 @@ module TurboCable
       io.write("Sec-WebSocket-Accept: #{accept}\r\n")
       io.write("\r\n")
 
+      # Set read timeout to 60 seconds to detect half-dead connections
+      # This matches Navigator's timeout and prevents ghost connections from accumulating
+      io.setsockopt(Socket::SOL_SOCKET, Socket::SO_RCVTIMEO, [60, 0].pack('l_2'))
+
       # Track connection subscriptions
       subscriptions = Set.new
 
