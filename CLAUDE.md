@@ -207,6 +207,18 @@ TurboCable::Broadcastable.broadcast_turbo_stream('test', '<h1>Hello!</h1>')
 3. Update `internal/cable/handler.go` in Navigator (if protocol change affects production)
 4. Add tests to `test/rack_handler_test.rb`
 
+**Release new version**:
+1. Update version in `lib/turbo_cable/version.rb`
+2. **CRITICAL**: Run `bundle install` to update `Gemfile.lock` with new version
+3. Update `CHANGELOG.md` with release notes
+4. Commit all changes together (version.rb, Gemfile.lock, CHANGELOG.md)
+5. Create git tag: `git tag -a v1.0.x -m "Release v1.0.x"`
+6. Push commits and tags: `git push && git push --tags`
+7. Build gem: `gem build turbo_cable.gemspec`
+8. Publish to RubyGems: `gem push turbo_cable-1.0.x.gem`
+
+**Why bundle install is critical**: CI runs in frozen/deployment mode and cannot update the lockfile. If the gemspec version changes but Gemfile.lock doesn't reflect it, both lint and test jobs will fail with "The gemspecs for path gems changed, but the lockfile can't be updated because frozen mode is set".
+
 **Debug connection issues**:
 - Check Rails logs for "WebSocket error:" messages
 - Browser console shows connection status and messages
