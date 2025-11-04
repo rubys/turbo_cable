@@ -191,6 +191,33 @@ ENV['TURBO_CABLE_BROADCAST_URL'] = 'http://localhost:3000/_broadcast'
 - **Thruster/nginx proxy**: When `PORT` is set to the proxy port, not the Rails server port
 - **Never needed**: When `PORT` correctly points to your Rails server (like with Navigator/configurator.rb)
 
+### WebSocket URL (Optional)
+
+By default, the Stimulus controller connects to `ws://[current-host]/cable`. For custom routing or multi-region deployments, you can specify the WebSocket URL via the standard Rails helper:
+
+```erb
+<!-- In your layout -->
+<head>
+  <%= action_cable_meta_tag %>
+</head>
+```
+
+This generates `<meta name="action-cable-url" content="...">` using your configured `config.action_cable.url`.
+
+**Example use cases:**
+- **Multi-region deployments**: Route to region-specific endpoints (e.g., `wss://example.com/regions/us-east/cable`)
+- **Reverse proxies**: Use custom paths configured in your proxy (e.g., Navigator, nginx)
+- **Custom routing**: Any non-standard WebSocket endpoint path
+
+Configure the URL in your environment config:
+
+```ruby
+# config/environments/production.rb
+config.action_cable.url = "wss://example.com/regions/#{ENV['FLY_REGION']}/cable"
+```
+
+The Stimulus controller will use this meta tag if present, otherwise fall back to the default `/cable` endpoint on the current host.
+
 ## Migration from Action Cable
 
 **⚠️ First, verify your deployment architecture supports TurboCable.** If you have multiple Rails instances serving the same app (Heroku dynos, AWS containers, Kubernetes pods, load-balanced VPS), TurboCable won't work for you. See "When NOT to Use" above.
