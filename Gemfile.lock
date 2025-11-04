@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    turbo_cable (1.0.0)
+    turbo_cable (1.0.1)
       rails (>= 7.0)
 
 GEM
