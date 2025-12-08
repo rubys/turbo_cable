@@ -89,6 +89,7 @@ module TurboCable
       case msg["type"]
       when "subscribe"
         stream = msg["stream"]
+        Rails.logger.debug "[TurboCable] WebSocket subscribing to stream: #{stream}"
 
         # Add connection to stream
         @mutex.synchronize do
@@ -100,6 +101,7 @@ module TurboCable
         # Send confirmation
         response = { type: "subscribed", stream: stream }
         send_frame(io, 1, response.to_json)
+        Rails.logger.debug "[TurboCable] WebSocket subscribed confirmation sent for: #{stream}"
 
       when "unsubscribe"
         stream = msg["stream"]
@@ -132,6 +134,8 @@ module TurboCable
 
       # Broadcast to all connections on this stream
       sockets = @mutex.synchronize { @connections[stream]&.dup || [] }
+
+      Rails.logger.debug "[TurboCable] Broadcasting to stream: #{stream}, #{sockets.size} connection(s)"
 
       sockets.each do |io|
         begin
