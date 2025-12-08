@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-12-07
+
+### Added
+
+- Debug logging throughout the TurboCable pipeline for diagnosing intermittent issues:
+  - `turbo_stream_from` helper logs when rendering stream markers
+  - `broadcast_json` logs broadcast URL and response codes
+  - WebSocket subscription/confirmation logging in RackHandler
+  - Broadcast delivery logging with connection count
+
+## [1.0.1] - 2025-11-04
+
+### Fixed
+
+- WebSocket disconnect handling improvements
+- Multi-region deployment support
+
+### Added
+
+- Version release checklist in CLAUDE.md
+
 ## [1.0.0] - 2025-01-04
 
 ### Added
@@ -53,4 +74,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No bidirectional WebSocket communication (server→client only)
 - No Action Cable channels DSL support
 
+[1.0.2]: https://github.com/rubys/turbo_cable/releases/tag/v1.0.2
+[1.0.1]: https://github.com/rubys/turbo_cable/releases/tag/v1.0.1
 [1.0.0]: https://github.com/rubys/turbo_cable/releases/tag/v1.0.0

@@ -20,6 +20,8 @@ module TurboCable
       default_port = ENV["TURBO_CABLE_PORT"] || ENV["PORT"] || "3000"
       uri = URI(ENV.fetch("TURBO_CABLE_BROADCAST_URL", "http://localhost:#{default_port}/_broadcast"))
 
+      Rails.logger.debug "[TurboCable] Broadcasting JSON to stream: #{stream_name} via #{uri}" if defined?(Rails)
+
       http = Net::HTTP.new(uri.host, uri.port)
       http.open_timeout = 1
       http.read_timeout = 1
@@ -30,9 +32,11 @@ module TurboCable
         data: data
       }.to_json
 
-      http.request(request)
+      response = http.request(request)
+      Rails.logger.debug "[TurboCable] Broadcast response: #{response.code}" if defined?(Rails)
+      response
     rescue => e
-      Rails.logger.error("TurboCable: JSON broadcast failed: #{e.class} - #{e.message}") if defined?(Rails)
+      Rails.logger.error("[TurboCable] JSON broadcast failed: #{e.class} - #{e.message}") if defined?(Rails)
     end
 
     # Async broadcast methods (truly async if Active Job is configured)
